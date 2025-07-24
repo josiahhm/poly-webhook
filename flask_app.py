@@ -1,151 +1,55 @@
 from flask import Flask, request, jsonify
-import os
 import json
-from openai import OpenAI
+import os
+from openai import OpenAI, OpenAIError
 
-# Set up Flask app
 app = Flask(__name__)
 
-# OpenAI client setup
-import os
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+# Initialize OpenAI client (will fail safely if env var not set)
+api_key = os.environ.get("OPENAI_API_KEY")
+if not api_key:
+    raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
+client = OpenAI(api_key=api_key)
 
+PENDING_FILE = "pending_entries.json"
 
-# File paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PENDING_ENTRIES_PATH = os.path.join(BASE_DIR, "pending_entries.json")
-LOG_PATH = os.path.join(BASE_DIR, "webhook_log.txt")
-
-# Prompt template
-PROMPT_TEMPLATE = """You are a polymer database assistant. For the polymer "{polymer_name}", return all of the following fields with real, sourced data:
-
-Common Name
-IUPAC Name
-Modulus (GPa) + Source
-Tensile Strength (MPa) + Source
-Density (g/cm³) + Source
-Dielectric Constant + Source
-Biodegradable? + Source
-Thermal Conductivity (W/m·K) + Source
-Refractive Index + Source
-Surface Energy (mJ/m²) + Source
-Water Contact Angle (°) + Source
-Gas Permeability (Barrer) + Source
-Glass Transition Temp (°C) + Source
-Melting Temperature (°C) + Source
-Thermal Decomposition Temp (°C) + Source
-Safety Data
-Hildebrand Solubility Parameter (MPa^0.5) + Source
-Hansen Solubility Parameters + Source
-Solubility + Source
-
-Return your answer in JSON format.
-"""
-
-@app.route("/")
-def home():
+@app.route('/')
+def index():
     return "PolyTherm Flask App is running."
 
-@app.route("/ping", methods=["GET"])
-def ping():
-    return jsonify({"status": "Webhook active"}), 200
-
-@app.route("/debug_headers", methods=["POST"])
-def debug_headers():
-    print(f"🔎 Headers: {dict(request.headers)}")
-    print(f"📦 Body: {request.get_json()}")
-    return jsonify({"status": "received"})
-
-@app.route("/add_polymer")
-def add_polymer():
-    polymer_name = request.args.get("name")
-    if not polymer_name:
-        return jsonify({"error": "Missing polymer name in URL query string."}), 400
-
-    try:
-        prompt = PROMPT_TEMPLATE.format(polymer_name=polymer_name)
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        content = response.choices[0].message.content
-
-        try:
-            polymer_data = json.loads(content)
-        except json.JSONDecodeError:
-            return jsonify({"error": "OpenAI response not valid JSON", "raw": content}), 500
-
-        if os.path.exists(PENDING_ENTRIES_PATH):
-            with open(PENDING_ENTRIES_PATH, "r") as f:
-                entries = json.load(f)
-        else:
-            entries = []
-
-        entries.append(polymer_data)
-
-        with open(PENDING_ENTRIES_PATH, "w") as f:
-            json.dump(entries, f, indent=2)
-
-        return jsonify({"status": "Polymer added", "name": polymer_name}), 200
-
-    except Exception as e:
-        print(f"[ERROR /add_polymer] {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/update_pending", methods=["POST"])
+@app.route('/update_pending', methods=['POST'])
 def update_pending():
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No JSON payload received."}), 400
+        # Parse JSON from request
+        data = request.get_json(force=True)
+        if not data or "name" not in data:
+            return jsonify({"error": "Missing 'name' field in request JSON"}), 400
 
-        if os.path.exists(PENDING_ENTRIES_PATH):
-            with open(PENDING_ENTRIES_PATH, "r") as f:
-                entries = json.load(f)
+        name = data["name"].strip()
+        if not name:
+            return jsonify({"error": "Polymer name cannot be empty"}), 400
+
+        # Read existing file or initialize
+        if os.path.exists(PENDING_FILE):
+            with open(PENDING_FILE, "r") as f:
+                try:
+                    entries = json.load(f)
+                except json.JSONDecodeError:
+                    entries = []
         else:
             entries = []
 
-        entries.append(data)
+        # Append new entry
+        entries.append({"name": name, "status": "pending"})
 
-        with open(PENDING_ENTRIES_PATH, "w") as f:
+        # Write updated file
+        with open(PENDING_FILE, "w") as f:
             json.dump(entries, f, indent=2)
 
-        # Log entry
-        with open(LOG_PATH, "a") as log_file:
-            log_file.write(f"Webhook received: {data.get('name', 'Unknown')}\n")
-
-        return jsonify({"status": "Polymer added via webhook"}), 200
+        return jsonify({"status": "success", "message": f"Polymer '{name}' added to pending entries."})
 
     except Exception as e:
-        print(f"[ERROR /update_pending] {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
-@app.route("/pending_entries", methods=["GET"])
-def get_pending_entries():
-    try:
-        if os.path.exists(PENDING_ENTRIES_PATH):
-            with open(PENDING_ENTRIES_PATH, "r") as f:
-                entries = json.load(f)
-            return jsonify(entries)
-        else:
-            return jsonify([])
-    except Exception as e:
-        print(f"[ERROR /pending_entries] {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/debug_entries", methods=["GET"])
-def debug_entries():
-    try:
-        if os.path.exists(PENDING_ENTRIES_PATH):
-            with open(PENDING_ENTRIES_PATH, "r") as f:
-                data = json.load(f)
-            return jsonify(data), 200
-        else:
-            return jsonify([]), 200
-    except Exception as e:
-        print(f"[ERROR /debug_entries] {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
-# Expose app for gunicorn
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
