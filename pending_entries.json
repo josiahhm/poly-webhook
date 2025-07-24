@@ -1,1 +1,35 @@
-[]
+[
+  {
+    "IUPAC Name": "poly(dimethylsiloxane)",
+    "Common Name": "Polydimethylsiloxane",
+    "Abbreviation": "PDMS",
+    "Modulus (GPa)": 0.003,
+    "Modulus Source": "https://polymerdatabase.com",
+    "Tensile Strength (MPa)": 2.5,
+    "Tensile Strength Source": "https://polymerdatabase.com",
+    "Density (g/cm³)": 0.97,
+    "Density Source": "https://polymerdatabase.com",
+    "Dielectric Constant": 2.8,
+    "Dielectric Constant Source": "https://polymerdatabase.com",
+    "Biodegradable": "No",
+    "Biodegradability Source": "https://polymerdatabase.com",
+    "Thermal Conductivity (W/m·K)": 0.15,
+    "Thermal Conductivity Source": "https://polymerdatabase.com",
+    "Refractive Index": 1.40,
+    "Refractive Index Source": "https://polymerdatabase.com",
+    "Surface Energy (mN/m)": 21,
+    "Surface Energy Source": "https://polymerdatabase.com",
+    "Water Contact Angle (°)": 110,
+    "Water Contact Angle Source": "https://polymerdatabase.com",
+    "Gas Permeability (cm³·mm/m²·day·atm)": 200,
+    "Gas Permeability Source": "https://polymerdatabase.com",
+    "Glass Transition Temp (°C)": -125,
+    "Tg Source": "https://polymerdatabase.com",
+    "Solubility": "Soluble in toluene, xylene, and ether",
+    "Solubility Source": "https://polymerdatabase.com",
+    "Hildebrand Solubility Parameter (MPa^0.5)": 15.5,
+    "Hildebrand Source": "https://polymerdatabase.com",
+    "Notes": "Extremely flexible silicone used in microfluidics and biomedical devices"
+  }
+]
+
