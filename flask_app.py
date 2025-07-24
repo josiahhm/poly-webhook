@@ -51,5 +51,19 @@ def update_pending():
     except Exception as e:
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
+@app.route('/debug_entries', methods=['GET'])
+def debug_entries():
+    try:
+        if not os.path.exists(PENDING_FILE):
+            return jsonify({"entries": []})
+
+        with open(PENDING_FILE, "r") as f:
+            entries = json.load(f)
+
+        return jsonify({"entries": entries})
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to load entries: {str(e)}"}), 500
+
 if __name__ == "__main__":
     app.run(debug=True)
