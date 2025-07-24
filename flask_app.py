@@ -7,7 +7,7 @@ from openai import OpenAI
 app = Flask(__name__)
 
 # OpenAI client setup
-client = OpenAI(api_key="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")  # Replace with your actual API key
+client = OpenAI(api_key="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")  # Replace with your actual API key
 
 # File paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
